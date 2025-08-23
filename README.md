@@ -51,16 +51,25 @@ ed2k://|file| OAV1202.mp4|2679020323|A4F82CB3B17F095C8B054EFF6C2A0464|h=MGKR42RD
 
 1. 克隆仓库：
    ```bash
-   git clone https://github.com/你的用户名/linkPurifier.git
+   git clone https://github.com/socks1s/ed2k.git
    ```
 
-2. 在浏览器中打开 `ed2k_purifier.html` 文件即可使用
+2. 在浏览器中打开 `index.html` 文件即可使用
 
 3. 或者使用本地服务器：
    ```bash
    python3 -m http.server 8080
    ```
-   然后访问 `http://localhost:8080/ed2k_purifier.html`
+   然后访问 `http://localhost:8080`
+
+## 📁 项目结构
+
+```
+ed2k/
+├── index.html               # 主要工具页面
+├── README.md                 # 项目说明文档
+└── .gitignore               # Git忽略文件
+```
 
 ## ⌨️ 键盘快捷键
 
