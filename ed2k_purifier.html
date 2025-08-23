@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ED2K链接净化器</title>
+    <style>
+        body {
+            font-family: 'Microsoft YaHei', Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        
+        .container {
+            background: white;
+            border-radius: 10px;
+            padding: 30px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 30px;
+        }
+        
+        .input-section, .output-section {
+            margin-bottom: 20px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 10px;
+            font-weight: bold;
+            color: #555;
+        }
+        
+        textarea {
+            width: 100%;
+            padding: 15px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            resize: vertical;
+            box-sizing: border-box;
+        }
+        
+        textarea:focus {
+            outline: none;
+            border-color: #4CAF50;
+        }
+        
+        #inputText {
+            height: 300px;
+            background-color: #fafafa;
+        }
+        
+        #outputText {
+            height: 300px;
+            background-color: #f0fff0;
+        }
+        
+        .button-container {
+            text-align: center;
+            margin: 20px 0;
+        }
+        
+        button {
+            background-color: #4CAF50;
+            color: white;
+            padding: 12px 30px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 0 10px;
+            transition: background-color 0.3s;
+        }
+        
+        button:hover {
+            background-color: #45a049;
+        }
+        
+        .secondary-btn {
+            background-color: #008CBA;
+        }
+        
+        .secondary-btn:hover {
+            background-color: #007B9A;
+        }
+        
+        .stats {
+            background-color: #e8f5e8;
+            padding: 15px;
+            border-radius: 6px;
+            margin-top: 20px;
+            border-left: 4px solid #4CAF50;
+        }
+        
+        .stats-item {
+            margin: 5px 0;
+            color: #333;
+        }
+        
+        .help-text {
+            color: #666;
+            font-size: 12px;
+            margin-top: 10px;
+            line-height: 1.4;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔗 ED2K链接净化器</h1>
+        
+        <div class="input-section">
+            <label for="inputText">输入框（粘贴包含ed2k链接的文本）：</label>
+            <textarea id="inputText" placeholder="请在此处粘贴包含ed2k链接的文本...
+
+示例：
+&lt;p&gt;ed2k://|file|Jallgone_and_Picun.mp4|1365985162|989FF939543F7913DD00220497CEDD11|/&lt;/p&gt;
+ed2k删除://|file|NGM27003.mp4|1511855350|EE0CE0425703F7F1DEE417B1DFE83555|h=XKZF6ASKMXHPYCJTS453BUZQYQI4X5LC|/
+ed2k://%7Cfile%7C%20OAV1202.mp4%7C2679020323%7CA4F82CB3B17F095C8B054EFF6C2A0464%7Ch=MGKR42RDNTWVVE5HZTNSSWJWIS5IWHW7%7C/"></textarea>
+            <div class="help-text">
+                支持的格式：HTML标签包裹的链接、URL编码的链接、包含"删除"字样的链接等
+            </div>
+        </div>
+        
+        <div class="button-container">
+            <button onclick="purifyLinks()">🧹 净化链接</button>
+            <button onclick="clearAll()" class="secondary-btn">🗑️ 清空所有</button>
+            <button onclick="copyOutput()" class="secondary-btn">📋 复制结果</button>
+        </div>
+        
+        <div class="output-section">
+            <label for="outputText">输出框（净化后的ed2k链接）：</label>
+            <textarea id="outputText" readonly placeholder="净化后的ed2k链接将显示在这里..."></textarea>
+        </div>
+        
+        <div id="stats" class="stats" style="display: none;">
+            <div class="stats-item">✅ <span id="validCount">0</span> 个有效链接</div>
+            <div class="stats-item">❌ <span id="invalidCount">0</span> 个无效链接被过滤</div>
+            <div class="stats-item">🔧 <span id="fixedCount">0</span> 个链接被修复</div>
+        </div>
+    </div>
+
+    <script>
+        function purifyLinks() {
+            const inputText = document.getElementById('inputText').value;
+            const outputTextarea = document.getElementById('outputText');
+            const statsDiv = document.getElementById('stats');
+            
+            if (!inputText.trim()) {
+                alert('请先输入包含ed2k链接的文本！');
+                return;
+            }
+            
+            const result = extractAndPurifyEd2kLinks(inputText);
+            
+            outputTextarea.value = result.validLinks.join('\n');
+            
+            // 显示统计信息
+            document.getElementById('validCount').textContent = result.validLinks.length;
+            document.getElementById('invalidCount').textContent = result.invalidCount;
+            document.getElementById('fixedCount').textContent = result.fixedCount;
+            statsDiv.style.display = 'block';
+            
+            // 滚动到结果区域
+            outputTextarea.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+        
+        function extractAndPurifyEd2kLinks(text) {
+            const validLinks = [];
+            let invalidCount = 0;
+            let fixedCount = 0;
+            
+            // 将文本按行分割
+            const lines = text.split('\n');
+            
+            for (let line of lines) {
+                line = line.trim();
+                if (!line) continue;
+                
+                // 提取可能的ed2k链接
+                const potentialLinks = extractPotentialEd2kLinks(line);
+                
+                for (let link of potentialLinks) {
+                    const purifiedLink = purifyEd2kLink(link);
+                    
+                    if (purifiedLink.isValid) {
+                        validLinks.push(purifiedLink.link);
+                        if (purifiedLink.wasFixed) {
+                            fixedCount++;
+                        }
+                    } else {
+                        invalidCount++;
+                    }
+                }
+            }
+            
+            return {
+                validLinks: [...new Set(validLinks)], // 去重
+                invalidCount,
+                fixedCount
+            };
+        }
+        
+        function extractPotentialEd2kLinks(text) {
+            const links = [];
+            
+            // 1. 从HTML标签中提取ed2k链接
+            const htmlRegex = /<[^>]*>(ed2k[^<]*)<\/[^>]*>/gi;
+            let htmlMatch;
+            while ((htmlMatch = htmlRegex.exec(text)) !== null) {
+                links.push(htmlMatch[1]);
+            }
+            
+            // 2. 直接匹配ed2k链接（包括各种变形和编码）
+            const ed2kRegex = /ed2k[^:]*:[\/\%]*[\/\%]*[^\s<>]*\|file\|[^\s<>]*/gi;
+            const matches = text.match(ed2kRegex);
+            if (matches) {
+                links.push(...matches);
+            }
+            
+            // 3. 处理剩余的ed2k片段
+            const remainingRegex = /ed2k[^\s<>]+/gi;
+            const remainingMatches = text.match(remainingRegex);
+            if (remainingMatches) {
+                for (let match of remainingMatches) {
+                    if (!links.some(link => link.includes(match) || match.includes(link))) {
+                        links.push(match);
+                    }
+                }
+            }
+            
+            return links;
+        }
+        
+        function purifyEd2kLink(link) {
+            let originalLink = link;
+            let wasFixed = false;
+            
+            // 1. 去除HTML标签
+            link = link.replace(/<[^>]*>/g, '');
+            
+            // 2. 处理"删除"等干扰词
+            if (link.includes('删除')) {
+                link = link.replace(/删除/g, '');
+                wasFixed = true;
+            }
+            
+            // 3. URL解码
+            if (link.includes('%')) {
+                try {
+                    link = decodeURIComponent(link);
+                    wasFixed = true;
+                } catch (e) {
+                    // 如果解码失败，继续使用原链接
+                }
+            }
+            
+            // 4. 修复协议部分
+            if (!link.startsWith('ed2k://')) {
+                // 处理各种变形
+                link = link.replace(/^ed2k[^:]*:[\/\%]*[\/\%]*/i, 'ed2k://');
+                wasFixed = true;
+            }
+            
+            // 5. 确保链接以正确的格式结尾
+            if (!link.endsWith('/') && link.includes('|file|')) {
+                link += '/';
+                wasFixed = true;
+            }
+            
+            // 6. 清理多余的空格和字符
+            link = link.replace(/\s+/g, '').trim();
+            
+            // 7. 验证ed2k链接格式
+            const isValid = validateEd2kLink(link);
+            
+            return {
+                link: link,
+                isValid,
+                wasFixed: wasFixed || (originalLink !== link)
+            };
+        }
+        
+        function validateEd2kLink(link) {
+            // 基本格式验证：ed2k://|file|文件名|大小|哈希值|可选参数|/
+            // 哈希值必须是32位十六进制，可能有额外的h=参数
+            const ed2kPattern = /^ed2k:\/\/\|file\|[^|]+\|\d+\|[A-F0-9]{32}\|.*\|?\/?$/i;
+            return ed2kPattern.test(link);
+        }
+        
+        function clearAll() {
+            document.getElementById('inputText').value = '';
+            document.getElementById('outputText').value = '';
+            document.getElementById('stats').style.display = 'none';
+        }
+        
+        function copyOutput() {
+            const outputText = document.getElementById('outputText');
+            if (!outputText.value.trim()) {
+                alert('没有可复制的内容！请先净化链接。');
+                return;
+            }
+            
+            outputText.select();
+            document.execCommand('copy');
+            
+            // 显示复制成功提示
+            const button = event.target;
+            const originalText = button.textContent;
+            button.textContent = '✅ 已复制';
+            button.style.backgroundColor = '#28a745';
+            
+            setTimeout(() => {
+                button.textContent = originalText;
+                button.style.backgroundColor = '#008CBA';
+            }, 2000);
+        }
+        
+        // 添加键盘快捷键
+        document.addEventListener('keydown', function(e) {
+            if (e.ctrlKey || e.metaKey) {
+                switch(e.key) {
+                    case 'Enter':
+                        e.preventDefault();
+                        purifyLinks();
+                        break;
+                    case 'r':
+                        e.preventDefault();
+                        clearAll();
+                        break;
+                }
+            }
+        });
+        
+        // 自动调整文本框高度
+        function autoResize(textarea) {
+            textarea.style.height = 'auto';
+            textarea.style.height = Math.min(textarea.scrollHeight, 500) + 'px';
+        }
+        
+        document.getElementById('inputText').addEventListener('input', function() {
+            autoResize(this);
+        });
+    </script>
+</body>
+</html>
