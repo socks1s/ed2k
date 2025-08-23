@@ -219,18 +219,25 @@ ed2k://%7Cfile%7C%20demo_content.mp4%7C1357924680%7CGHI789JKL0123456789012345678
                 links.push(htmlMatch[1]);
             }
             
-            // 2. 直接匹配ed2k链接（包括各种变形和编码）
-            const ed2kRegex = /ed2k[^:]*:[\/\%]*[\/\%]*[^\s<>]*\|file\|[^\s<>]*/gi;
+            // 2. 匹配URL编码的ed2k链接（%7C等）
+            const encodedRegex = /ed2k[^:]*:%[0-9A-F]{2}[^\s<>]*/gi;
+            const encodedMatches = text.match(encodedRegex);
+            if (encodedMatches) {
+                links.push(...encodedMatches);
+            }
+            
+            // 3. 直接匹配ed2k链接（包括各种变形）
+            const ed2kRegex = /ed2k[^:]*:\/\/[^\s<>]+/gi;
             const matches = text.match(ed2kRegex);
             if (matches) {
                 links.push(...matches);
             }
             
-            // 3. 处理剩余的ed2k片段
-            const remainingRegex = /ed2k[^\s<>]+/gi;
-            const remainingMatches = text.match(remainingRegex);
-            if (remainingMatches) {
-                for (let match of remainingMatches) {
+            // 4. 匹配包含|file|的片段
+            const fileRegex = /ed2k[^\s<>]*\|file\|[^\s<>]*/gi;
+            const fileMatches = text.match(fileRegex);
+            if (fileMatches) {
+                for (let match of fileMatches) {
                     if (!links.some(link => link.includes(match) || match.includes(link))) {
                         links.push(match);
                     }
@@ -276,8 +283,9 @@ ed2k://%7Cfile%7C%20demo_content.mp4%7C1357924680%7CGHI789JKL0123456789012345678
                 wasFixed = true;
             }
             
-            // 6. 清理多余的空格和字符
-            link = link.replace(/\s+/g, '').trim();
+            // 6. 清理多余的空格（但保留文件名中的空格）
+            // 只在链接开头和结尾去除空格
+            link = link.trim();
             
             // 7. 验证ed2k链接格式
             const isValid = validateEd2kLink(link);
