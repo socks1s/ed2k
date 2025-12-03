@@ -102,6 +102,7 @@ function processTextForTest(text) {
     const invalidLinksList = [];
     const lines = text.split('\n');
     let totalProcessed = 0;
+    let duplicates = 0;
     
     for (let line of lines) {
         line = line.trim();
@@ -118,6 +119,8 @@ function processTextForTest(text) {
             if (isValid) {
                 if (!validLinksSet.has(link)) {
                     validLinksSet.add(link);
+                } else {
+                    duplicates++;
                 }
             } else {
                 invalidLinksList.push(rawLink);
@@ -130,7 +133,8 @@ function processTextForTest(text) {
         validCount: validLinksSet.size,
         validLinks: Array.from(validLinksSet),
         invalidCount: invalidLinksList.length,
-        invalidLinks: invalidLinksList
+        invalidLinks: invalidLinksList,
+        duplicates: duplicates
     };
 }
 
@@ -140,8 +144,18 @@ const result = processTextForTest(testInput);
 console.log('---------------------------------------------------');
 console.log(`Total Processed Links (Raw Candidates): ${result.total}`);
 console.log(`Valid Links (Unique): ${result.validCount}`);
+console.log(`Duplicates Removed: ${result.duplicates}`);
 console.log(`Invalid Links: ${result.invalidCount}`);
 console.log('---------------------------------------------------');
+
+// Verify formula: Total = Valid + Duplicates + Invalid
+const calculatedTotal = result.validCount + result.duplicates + result.invalidCount;
+if (calculatedTotal === result.total) {
+    console.log(`✅ Stats Formula Verified: ${result.total} = ${result.validCount} + ${result.duplicates} + ${result.invalidCount}`);
+} else {
+    console.log(`❌ Stats Formula Mismatch: Total(${result.total}) != Valid(${result.validCount}) + Duplicates(${result.duplicates}) + Invalid(${result.invalidCount})`);
+    process.exit(1);
+}
 
 if (result.invalidCount > 0) {
     console.log('❌ FAILED LINKS (Should be 0 if all fixed):');

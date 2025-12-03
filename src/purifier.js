@@ -9,12 +9,14 @@ const stats = {
     valid: 0,
     invalid: 0,
     fixed: 0,
+    duplicates: 0,
     failedLinks: [],
     reset() {
         this.total = 0;
         this.valid = 0;
         this.invalid = 0;
         this.fixed = 0;
+        this.duplicates = 0;
         this.failedLinks = [];
     }
 };
@@ -29,6 +31,7 @@ const elements = {
     validCount: null,
     invalidCount: null,
     fixedCount: null,
+    duplicateCount: null,
     totalCount: null,
     toast: null,
     
@@ -41,6 +44,7 @@ const elements = {
         this.validCount = document.getElementById('validCount');
         this.invalidCount = document.getElementById('invalidCount');
         this.fixedCount = document.getElementById('fixedCount');
+        this.duplicateCount = document.getElementById('duplicateCount');
         this.totalCount = document.getElementById('totalCount');
         this.toast = document.getElementById('toast');
         
@@ -120,15 +124,8 @@ function processText(text) {
                     stats.valid++;
                     if (wasFixed) stats.fixed++;
                 } else {
-                    // Duplicate valid link, we might want to count it or ignore
-                    // For now, we don't increment valid count for duplicates
-                    // But to make total = valid + invalid match visually if we sum counts,
-                    // we should probably track duplicates separately if we care about exact equation.
-                    // However, user requirement "total = valid + invalid" usually implies unique valid + failed attempts.
-                    // Or total inputs = unique valid + duplicate valid + invalid.
-                    // Let's just ensure stats.total tracks ALL attempts.
-                    // And stats.invalid tracks failures.
-                    // If a link is valid but duplicate, it is still a "success" in processing terms.
+                    // Duplicate valid link
+                    stats.duplicates++;
                 }
             } else {
                 stats.invalid++;
@@ -323,6 +320,7 @@ function updateStatsUI() {
         elements.validCount.textContent = stats.valid;
         elements.invalidCount.textContent = stats.invalid;
         elements.fixedCount.textContent = stats.fixed;
+        if (elements.duplicateCount) elements.duplicateCount.textContent = stats.duplicates;
         if (elements.totalCount) elements.totalCount.textContent = stats.total;
         elements.statsDiv.style.display = 'block';
     }
