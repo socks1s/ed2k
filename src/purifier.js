@@ -33,7 +33,7 @@ const elements = {
     fixedCount: null,
     duplicateCount: null,
     totalCount: null,
-    toast: null,
+    toastContainer: null,
     copyBtn: null,
     
     init() {
@@ -47,7 +47,7 @@ const elements = {
         this.fixedCount = document.getElementById('fixedCount');
         this.duplicateCount = document.getElementById('duplicateCount');
         this.totalCount = document.getElementById('totalCount');
-        this.toast = document.getElementById('toast');
+        this.toastContainer = document.getElementById('toast-container');
         this.copyBtn = document.getElementById('copyBtn');
         
         // Bind events
@@ -413,39 +413,69 @@ function clearAll() {
     if (elements.copyBtn) elements.copyBtn.disabled = true;
 }
 
-function copyOutput() {
-    if (!elements.output || !elements.output.value.trim()) {
-        showToast('没有可复制的内容！请先净化链接。', 'warning');
+async function copyOutput() {
+    const text = elements.output.value;
+    // Double check content exists (though button should be disabled)
+    if (!text.trim()) {
+        showToast('没有可复制的内容！', 'warning');
         return;
     }
-    
-    const text = elements.output.value;
-    
-    if (navigator.clipboard && navigator.clipboard.writeText) {
-        navigator.clipboard.writeText(text)
-            .then(() => showToast('已复制', 'success'))
-            .catch(() => fallbackCopy(elements.output));
-    } else {
-        fallbackCopy(elements.output);
-    }
-}
 
-function fallbackCopy(textarea) {
-    textarea.select();
-    try {
-        document.execCommand('copy');
+    const success = await copyTextToClipboard(text);
+    if (success) {
         showToast('已复制', 'success');
-    } catch (err) {
+    } else {
         showToast('复制失败，请手动复制', 'error');
     }
 }
 
+/**
+ * Robust copy to clipboard function
+ * Tries Modern API first, then fallbacks to legacy method
+ * @param {string} text 
+ * @returns {Promise<boolean>} success
+ */
+async function copyTextToClipboard(text) {
+    // 1. Try Modern Clipboard API
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+        try {
+            await navigator.clipboard.writeText(text);
+            return true;
+        } catch (err) {
+            console.warn('Clipboard API failed, trying fallback...', err);
+        }
+    }
+
+    // 2. Fallback: document.execCommand('copy')
+    try {
+        const textArea = document.createElement("textarea");
+        textArea.value = text;
+        
+        // Ensure element is part of DOM but not disruptive
+        textArea.style.position = "fixed";
+        textArea.style.left = "-9999px";
+        textArea.style.top = "0";
+        textArea.setAttribute('readonly', ''); // Prevent keyboard popping up on mobile
+        document.body.appendChild(textArea);
+        
+        textArea.focus();
+        textArea.select();
+        
+        const successful = document.execCommand('copy');
+        document.body.removeChild(textArea);
+        return successful;
+    } catch (err) {
+        console.error('Fallback copy failed:', err);
+        return false;
+    }
+}
+
 function showToast(message, type = 'success') {
-    if (!elements.toast) return;
+    if (!elements.toastContainer) return;
     
-    // Reset classes
-    elements.toast.className = 'toast';
-    elements.toast.classList.add(type);
+    // Create toast element
+    const toast = document.createElement('div');
+    toast.className = `toast ${type}`;
     
     // Create icon element
     const icon = document.createElement('div');
@@ -454,23 +484,31 @@ function showToast(message, type = 'success') {
     // Create text node
     const text = document.createTextNode(message.replace(/^[✅⚠️❌]\s*/, '')); // Strip existing emojis if any
     
-    // Clear and append
-    elements.toast.innerHTML = '';
-    elements.toast.appendChild(icon);
-    elements.toast.appendChild(text);
+    // Append content
+    toast.appendChild(icon);
+    toast.appendChild(text);
     
-    elements.toast.style.display = 'flex';
+    // Append to container
+    elements.toastContainer.appendChild(toast);
     
-    // Trigger reflow
-    elements.toast.offsetHeight; 
-    elements.toast.classList.add('show');
+    // Trigger reflow for animation
+    toast.offsetHeight; 
     
+    // Show animation
+    requestAnimationFrame(() => {
+        toast.classList.add('show');
+    });
+    
+    // Remove after timeout
     setTimeout(() => {
-        elements.toast.classList.remove('show');
+        toast.classList.remove('show');
+        // Wait for transition to finish before removing element
         setTimeout(() => {
-            elements.toast.style.display = 'none';
+            if (toast.parentNode) {
+                toast.parentNode.removeChild(toast);
+            }
         }, 400); // Match transition duration
-    }, 2000);
+    }, 3000); // Increased duration slightly for better readability
 }
 
 // Removed autoResize function as fixed height is required
