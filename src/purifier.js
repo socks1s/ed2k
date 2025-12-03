@@ -144,6 +144,14 @@ const elements = {
                  this.input.scrollTop = this.input.scrollHeight;
              }
         });
+        
+        // Auto-purify on input
+        this.input.addEventListener('input', () => {
+            // Debounce slightly if needed, but for local text processing usually fine to run immediately
+            // Or simple throttling?
+            // Let's try immediate first as text processing is fast.
+            purifyLinks(false); // Pass false to suppress success toast on every keystroke
+        });
     }
 };
 
@@ -154,16 +162,27 @@ document.addEventListener('DOMContentLoaded', () => {
     window.purifyLinks = purifyLinks;
     window.clearAll = clearAll;
     window.copyOutput = copyOutput;
+    
+    // Initial check if there is content (e.g. browser restore)
+    if (elements.input && elements.input.value.trim()) {
+        purifyLinks(false);
+    }
 });
 
 /**
  * Main function to process input text
+ * @param {boolean} showSuccessToast - Whether to show "Purification Complete" toast
  */
-function purifyLinks() {
+function purifyLinks(showSuccessToast = true) {
     const inputText = elements.input.value;
     
     if (!inputText.trim()) {
-        showToast('请先输入包含ed2k链接的文本！', 'warning');
+        // If empty, just clear output
+        elements.output.value = '';
+        stats.reset();
+        updateStatsUI();
+        if (elements.failedSection) elements.failedSection.style.display = 'none';
+        if (elements.copyBtn) elements.copyBtn.disabled = true;
         return;
     }
     
@@ -187,8 +206,13 @@ function purifyLinks() {
     }
     
     updateStatsUI();
-    elements.output.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    showToast('净化完成', 'success');
+    // Only scroll or toast on manual trigger (which we removed) or specific cases?
+    // If auto-purify, we don't want to scroll output violently while typing.
+    // elements.output.scrollIntoView({ behavior: 'smooth', block: 'center' }); // Removed for auto-mode
+    
+    if (showSuccessToast) {
+        showToast('净化完成', 'success');
+    }
 }
 
 /**
