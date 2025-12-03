@@ -145,8 +145,11 @@ const elements = {
              }
         });
         
-        // Auto-purify on input
+        // Auto-purify on input and save to localStorage
         this.input.addEventListener('input', () => {
+            // Save to local storage
+            localStorage.setItem('ed2k_purifier_input', this.input.value);
+            
             // Debounce slightly if needed, but for local text processing usually fine to run immediately
             // Or simple throttling?
             // Let's try immediate first as text processing is fast.
@@ -163,7 +166,13 @@ document.addEventListener('DOMContentLoaded', () => {
     window.clearAll = clearAll;
     window.copyOutput = copyOutput;
     
-    // Initial check if there is content (e.g. browser restore)
+    // Load from local storage if available
+    const savedInput = localStorage.getItem('ed2k_purifier_input');
+    if (savedInput) {
+        elements.input.value = savedInput;
+    }
+
+    // Initial check if there is content (e.g. browser restore or local storage)
     if (elements.input && elements.input.value.trim()) {
         purifyLinks(false);
     }
@@ -541,6 +550,9 @@ function updateStatsUI() {
 function clearAll() {
     if (elements.input) elements.input.value = '';
     if (elements.output) elements.output.value = '';
+    // Clear local storage
+    localStorage.removeItem('ed2k_purifier_input');
+    
     // if (elements.statsDiv) elements.statsDiv.style.display = 'none'; // Keep visible
     stats.reset();
     updateStatsUI(); // Reset stats to 0
