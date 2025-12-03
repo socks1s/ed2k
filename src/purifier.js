@@ -24,6 +24,7 @@ const stats = {
 // Keep track of last known valid count to calculate diff
 let lastValidCount = 0;
 let lastInvalidCount = 0; // Track invalid count for diffing
+let lastDuplicateCount = 0; // Track duplicate count for diffing
 
 // Debounce timer
 let debounceTimer = null;
@@ -188,6 +189,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // Initialize baseline after first load
         lastValidCount = stats.valid;
         lastInvalidCount = stats.invalid;
+        lastDuplicateCount = stats.duplicates;
     }
 });
 
@@ -204,6 +206,7 @@ function purifyLinks(showDiffToast = true) {
         stats.reset();
         lastValidCount = 0; // Reset baseline
         lastInvalidCount = 0;
+        lastDuplicateCount = 0;
         updateStatsUI();
         if (elements.failedSection) elements.failedSection.style.display = 'none';
         if (elements.copyBtn) elements.copyBtn.disabled = true;
@@ -234,31 +237,52 @@ function purifyLinks(showDiffToast = true) {
     // Calculate diff
     const newValidCount = stats.valid;
     const newInvalidCount = stats.invalid;
+    const newDuplicateCount = stats.duplicates;
     
     const addedCount = newValidCount - lastValidCount;
-    const failedDiff = newInvalidCount - lastInvalidCount; // Usually positive if user adds invalid links
+    const failedDiff = newInvalidCount - lastInvalidCount;
+    const duplicateDiff = newDuplicateCount - lastDuplicateCount;
     
     if (showDiffToast) {
-         // Case 1: Has new valid links
-         if (addedCount > 0) {
-             let msg = `成功解析 ${addedCount} 条新链接`;
-             if (failedDiff > 0) {
-                 msg += `，${failedDiff} 条失败`;
-                 showToast(msg, 'warning'); // Mixed result uses warning color
-             } else {
-                 showToast(msg, 'success');
-             }
-         } 
-         // Case 2: Only failures added
-         else if (failedDiff > 0) {
+         // Case 1: Only failures added -> RED (Error)
+         if (failedDiff > 0 && addedCount === 0 && duplicateDiff === 0) {
              showToast(`解析失败 ${failedDiff} 条链接`, 'error');
          }
-         // Case 3: No changes (user typing comments or partial links), do nothing
+         // Case 2: Only duplicates added -> ORANGE (Warning)
+         else if (duplicateDiff > 0 && addedCount === 0 && failedDiff === 0) {
+             showToast(`检测到 ${duplicateDiff} 条重复链接`, 'warning');
+         }
+         // Case 3: Mixed results or only successes
+         else if (addedCount > 0 || failedDiff > 0 || duplicateDiff > 0) {
+             // Priority: If ANY failure -> RED/ORANGE (Warning)
+             // If NO failure but has duplicates -> ORANGE (Warning)
+             // If ONLY success -> GREEN (Success)
+             
+             let parts = [];
+             if (addedCount > 0) parts.push(`成功 ${addedCount}`);
+             if (failedDiff > 0) parts.push(`失败 ${failedDiff}`);
+             if (duplicateDiff > 0) parts.push(`重复 ${duplicateDiff}`);
+             
+             const msg = parts.join('，');
+             
+             if (failedDiff > 0) {
+                 // If there are failures, treat as error/warning
+                 showToast(msg, 'error'); 
+             } else if (duplicateDiff > 0) {
+                 // No failures but has duplicates, treat as warning
+                 showToast(msg, 'warning');
+             } else {
+                 // Only successes
+                 showToast(msg, 'success');
+             }
+         }
+         // Case 4: No changes, do nothing
     }
     
     // Update baseline for next run
     lastValidCount = newValidCount;
     lastInvalidCount = newInvalidCount;
+    lastDuplicateCount = newDuplicateCount;
 }
 
 /**
