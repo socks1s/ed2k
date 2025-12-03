@@ -354,7 +354,8 @@ function cleanProtocolPrefix(link) {
     
     // Regex to match CJK characters and other noise
     // Range: CJK Unified Ideographs, Extended A/B, Compatibility, etc.
-    const noiseRegex = /[\u3400-\u4DBF\u4E00-\u9FFF\uF900-\uFAFF\s]/g;
+    // Added \uFF00-\uFFEF for Halfwidth and Fullwidth Forms (includes full-width parens （）)
+    const noiseRegex = /[\u3400-\u4DBF\u4E00-\u9FFF\uF900-\uFAFF\uFF00-\uFFEF\s]/g;
     
     const prefix = link.slice(0, end).replace(noiseRegex, '');
     return prefix + link.slice(end);
