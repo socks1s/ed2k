@@ -252,10 +252,41 @@ function purifyLink(link) {
 
 
     // 3. Clean Protocol Prefix (remove CJK and other noise)
-    const cleanPrefixResult = cleanProtocolPrefix(currentLink);
-    if (cleanPrefixResult !== currentLink) {
-        currentLink = cleanPrefixResult;
-        wasFixed = true;
+    // Also handle cases where CJK is mixed with protocol characters (e.g. ed删2k)
+    // or inserted between protocol and file separator (e.g. ed2k:删除//)
+    
+    // First, ensure protocol is standard ed2k:// if it looks like one
+    // This regex looks for variations of 'ed2k' followed by '://' with potential noise
+    // or patterns like `ed2k:/` followed by non-ascii then `/`
+    if (/^e[^:]*k[^:]*:\/\//i.test(currentLink) || /^ed2k:[\u3400-\u4DBF\u4E00-\u9FFF\uF900-\uFAFF]+\/\//i.test(currentLink) || /^ed2k:\/[^\/]+\//i.test(currentLink)) {
+        // Try to identify the part before |file|
+        const pipeIndex = currentLink.indexOf('|');
+        if (pipeIndex > -1) {
+            // We found a pipe, assume everything before it is the protocol/prefix section
+            // Replace the start (up to |file|) with ed2k:// if it contains patterns like "ed2k" or "file"
+            // But wait, we need to preserve `|file|`
+            // Let's find the first occurrence of `|file|`
+            const filePartIndex = currentLink.indexOf('|file|');
+            if (filePartIndex > -1) {
+                // Everything before |file| is considered the dirty protocol
+                currentLink = 'ed2k://' + currentLink.slice(filePartIndex);
+                wasFixed = true;
+            } else {
+                // Maybe it's just `|` without `file` (rare for valid links but possible in fragments)
+                // Fallback to cleaning chars
+                const cleanPrefixResult = cleanProtocolPrefix(currentLink);
+                if (cleanPrefixResult !== currentLink) {
+                    currentLink = cleanPrefixResult;
+                    wasFixed = true;
+                }
+            }
+        }
+    } else {
+        const cleanPrefixResult = cleanProtocolPrefix(currentLink);
+        if (cleanPrefixResult !== currentLink) {
+            currentLink = cleanPrefixResult;
+            wasFixed = true;
+        }
     }
 
     // 4. Normalize Protocol
