@@ -54,24 +54,95 @@ const elements = {
         // Removed autoResize binding to keep height fixed
         document.addEventListener('keydown', handleKeydown);
         
-        // Auto-append newline on blur/hidden
-        const ensureTrailingNewline = () => {
+        // Auto-append newline on blur/hidden and keep scroll at bottom with padding
+        const ensureTrailingNewlineAndScroll = () => {
             const input = this.input;
             if (!input) return;
             
             const val = input.value;
-            // Only append if content exists and doesn't already end with a newline
+            let changed = false;
+            
+            // 1. Ensure newline
             if (val && !val.endsWith('\n')) {
                 input.value = val + '\n';
+                changed = true;
             }
+            
+            // 2. Ensure empty lines buffer at bottom (add extra newlines if needed for visual padding)
+            // Actually user just wants visual space and scroll to bottom.
+            // Adding actual newlines changes data which might be annoying if they want to edit previous line.
+            // But "始终需要有几行是空的" implies adding newlines or just scrolling past end?
+            // If we scroll past end, we need content to scroll to.
+            // Let's try to just ensure 2 extra newlines at the end for buffer if not present?
+            // Or better: Just scroll to bottom.
+            
+            // "自动将进度条拉到最底下"
+            input.scrollTop = input.scrollHeight;
         };
 
-        this.input.addEventListener('blur', ensureTrailingNewline);
-        window.addEventListener('blur', ensureTrailingNewline);
+        this.input.addEventListener('blur', ensureTrailingNewlineAndScroll);
+        window.addEventListener('blur', ensureTrailingNewlineAndScroll);
         document.addEventListener('visibilitychange', () => {
             if (document.hidden) {
-                ensureTrailingNewline();
+                ensureTrailingNewlineAndScroll();
             }
+        });
+        
+        // Also scroll on input to keep cursor in view if at bottom
+        this.input.addEventListener('input', () => {
+             // If near bottom, keep at bottom? 
+             // Or just rely on browser default behavior for typing.
+             // User request: "即使文字满了，也需要自动将进度条拉到最底下"
+             // This usually implies when *appending* programmatically or pasting.
+             // But "光标保持在最下面" implies standard behavior.
+             
+             // The request: "最底下始终需要有几行是空的"
+             // We can achieve this by adding padding-bottom to the textarea via CSS?
+             // But that doesn't move the cursor.
+             // If we add actual newlines, it affects the value.
+             // Let's assume adding actual newlines is acceptable given the context of "batch pasting".
+             
+             const input = this.input;
+             const val = input.value;
+             if (val.length > 0 && !val.endsWith('\n\n\n')) {
+                 // Check if we are at the end? No, user wants buffer.
+                 // Let's not be too aggressive on 'input' event as it interrupts typing.
+             }
+        });
+        
+        // Add a specific handler for the "empty lines at bottom" requirement
+        // We can use CSS padding-bottom for the visual "empty lines" effect without modifying value
+        this.input.style.paddingBottom = "50px"; // Reserve space at bottom
+        
+        // Ensure scroll stays at bottom when new content is added/focused
+        const keepScrollAtBottom = () => {
+             if (document.activeElement === this.input) {
+                 // If user is typing, we might not want to force scroll unless they are at end?
+                 // But if they append text (paste), browser handles it.
+                 // The main issue is when text fills up, the bottom line is right at the border.
+                 // The padding-bottom fixes the "blocked by border" issue.
+                 
+                 // "自动将进度条拉到最底下" -> Force scroll to bottom on blur/paste
+                 this.input.scrollTop = this.input.scrollHeight;
+             }
+        };
+        
+        // Enhance the ensureTrailingNewline to also scroll
+        const enhancedEnsure = () => {
+            ensureTrailingNewlineAndScroll();
+            // Double check scroll after layout update
+            requestAnimationFrame(() => {
+                this.input.scrollTop = this.input.scrollHeight;
+            });
+        };
+        
+        this.input.addEventListener('blur', enhancedEnsure);
+        window.addEventListener('blur', enhancedEnsure);
+        // On focus, if at end, ensure scroll
+        this.input.addEventListener('focus', () => {
+             if (this.input.selectionStart === this.input.value.length) {
+                 this.input.scrollTop = this.input.scrollHeight;
+             }
         });
     }
 };
