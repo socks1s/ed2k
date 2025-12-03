@@ -21,6 +21,13 @@ const stats = {
     }
 };
 
+// Keep track of last known valid count to calculate diff
+let lastValidCount = 0;
+let lastInvalidCount = 0; // Track invalid count for diffing
+
+// Debounce timer
+let debounceTimer = null;
+
 // DOM Elements
 const elements = {
     input: null,
@@ -150,10 +157,12 @@ const elements = {
             // Save to local storage
             localStorage.setItem('ed2k_purifier_input', this.input.value);
             
-            // Debounce slightly if needed, but for local text processing usually fine to run immediately
-            // Or simple throttling?
-            // Let's try immediate first as text processing is fast.
-            purifyLinks(false); // Pass false to suppress success toast on every keystroke
+            // Debounce logic
+            if (debounceTimer) clearTimeout(debounceTimer);
+            
+            debounceTimer = setTimeout(() => {
+                purifyLinks(true); // Pass true to show diff toast
+            }, 500); // 500ms debounce
         });
     }
 };
@@ -175,21 +184,26 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Initial check if there is content (e.g. browser restore or local storage)
     if (elements.input && elements.input.value.trim()) {
-        purifyLinks(false);
+        purifyLinks(false); // No toast on initial load
+        // Initialize baseline after first load
+        lastValidCount = stats.valid;
+        lastInvalidCount = stats.invalid;
     }
 });
 
 /**
  * Main function to process input text
- * @param {boolean} showSuccessToast - Whether to show "Purification Complete" toast
+ * @param {boolean} showDiffToast - Whether to show toast based on result diff
  */
-function purifyLinks(showSuccessToast = true) {
+function purifyLinks(showDiffToast = true) {
     const inputText = elements.input.value;
     
     if (!inputText.trim()) {
         // If empty, just clear output
         elements.output.value = '';
         stats.reset();
+        lastValidCount = 0; // Reset baseline
+        lastInvalidCount = 0;
         updateStatsUI();
         if (elements.failedSection) elements.failedSection.style.display = 'none';
         if (elements.copyBtn) elements.copyBtn.disabled = true;
@@ -216,13 +230,35 @@ function purifyLinks(showSuccessToast = true) {
     }
     
     updateStatsUI();
-    // Only scroll or toast on manual trigger (which we removed) or specific cases?
-    // If auto-purify, we don't want to scroll output violently while typing.
-    // elements.output.scrollIntoView({ behavior: 'smooth', block: 'center' }); // Removed for auto-mode
     
-    if (showSuccessToast) {
-        showToast('净化完成', 'success');
+    // Calculate diff
+    const newValidCount = stats.valid;
+    const newInvalidCount = stats.invalid;
+    
+    const addedCount = newValidCount - lastValidCount;
+    const failedDiff = newInvalidCount - lastInvalidCount; // Usually positive if user adds invalid links
+    
+    if (showDiffToast) {
+         // Case 1: Has new valid links
+         if (addedCount > 0) {
+             let msg = `成功解析 ${addedCount} 条新链接`;
+             if (failedDiff > 0) {
+                 msg += `，${failedDiff} 条失败`;
+                 showToast(msg, 'warning'); // Mixed result uses warning color
+             } else {
+                 showToast(msg, 'success');
+             }
+         } 
+         // Case 2: Only failures added
+         else if (failedDiff > 0) {
+             showToast(`解析失败 ${failedDiff} 条链接`, 'error');
+         }
+         // Case 3: No changes (user typing comments or partial links), do nothing
     }
+    
+    // Update baseline for next run
+    lastValidCount = newValidCount;
+    lastInvalidCount = newInvalidCount;
 }
 
 /**
