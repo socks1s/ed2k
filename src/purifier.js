@@ -107,7 +107,17 @@ function purifyLinks() {
  */
 function processText(text) {
     const validLinksSet = new Set();
-    const lines = text.split('\n');
+    
+    // Pre-process text to fix broken protocol prefixes caused by newlines
+    // Matches e, d, 2, k separated by whitespace/newlines, and ://
+    const preProcessedText = text.replace(/e\s*d\s*2\s*k\s*:\s*\/\s*\//gim, (match) => {
+        if (/\n|\r/.test(match)) {
+            return 'ed2k://';
+        }
+        return match;
+    });
+
+    const lines = preProcessedText.split('\n');
     
     for (let line of lines) {
         line = line.trim();
