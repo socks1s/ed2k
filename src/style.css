@@ -353,6 +353,11 @@ button:disabled {
 }
 .icon-warning::after { content: none; }
 
+/* Info Icon (i) - SVG Data URI (White Stroke) */
+.icon-info {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='10'%3E%3C/circle%3E%3Cline x1='12' y1='16' x2='12' y2='12'%3E%3C/line%3E%3Cline x1='12' y1='8' x2='12.01' y2='8'%3E%3C/line%3E%3C/svg%3E");
+}
+
 /* Toast Background Colors */
 .toast.success {
     background: rgba(16, 185, 129, 0.9); /* Green */
@@ -368,6 +373,12 @@ button:disabled {
 
 .toast.warning {
     background: rgba(245, 158, 11, 0.9); /* Orange */
+    color: white;
+    padding-left: 20px;
+}
+
+.toast.info {
+    background: rgba(59, 130, 246, 0.9); /* Blue */
     color: white;
     padding-left: 20px;
 }

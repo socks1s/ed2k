@@ -193,6 +193,14 @@ document.addEventListener('DOMContentLoaded', () => {
         lastInvalidCount = stats.invalid;
         lastDuplicateCount = stats.duplicates;
     }
+    
+    // Add focus listener to window to detect when user comes back
+    window.addEventListener('focus', () => {
+        if (justCopied) {
+            showToast('提示：您可以清空输入框以开始新的任务', 'info');
+            justCopied = false; // Reset flag
+        }
+    });
 });
 
 /**
@@ -628,6 +636,9 @@ function clearAll() {
     if (elements.copyBtn) elements.copyBtn.disabled = true;
 }
 
+// Variable to track if copy action just happened
+let justCopied = false;
+
 async function copyOutput() {
     const text = elements.output.value;
     // Double check content exists (though button should be disabled)
@@ -639,6 +650,7 @@ async function copyOutput() {
     const success = await copyTextToClipboard(text);
     if (success) {
         showToast('已复制', 'success');
+        justCopied = true; // Set flag for focus reminder
     } else {
         showToast('复制失败，请手动复制', 'error');
     }
