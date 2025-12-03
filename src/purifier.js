@@ -49,7 +49,7 @@ const elements = {
         this.toast = document.getElementById('toast');
         
         // Bind events
-        this.input?.addEventListener('input', () => autoResize(this.input));
+        // Removed autoResize binding to keep height fixed
         document.addEventListener('keydown', handleKeydown);
     }
 };
@@ -83,7 +83,6 @@ function purifyLinks() {
     if (stats.failedLinks.length > 0) {
         if (elements.failedSection) elements.failedSection.style.display = 'block';
         if (elements.failedOutput) elements.failedOutput.value = stats.failedLinks.join('\n');
-        autoResize(elements.failedOutput);
     } else {
         if (elements.failedSection) elements.failedSection.style.display = 'none';
         if (elements.failedOutput) elements.failedOutput.value = '';
@@ -434,12 +433,7 @@ function showToast(message, type = 'success') {
     }, 2000);
 }
 
-function autoResize(textarea) {
-    if (!textarea) return;
-    textarea.style.height = 'auto';
-    textarea.style.height = Math.min(textarea.scrollHeight, 500) + 'px';
-}
-
+// Removed autoResize function as fixed height is required
 function handleKeydown(e) {
     if (e.ctrlKey || e.metaKey) {
         switch(e.key.toLowerCase()) {
