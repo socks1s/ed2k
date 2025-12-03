@@ -119,6 +119,7 @@ textarea {
     background-color: #f9fafb;
     color: var(--text-main);
     transition: all 0.2s;
+    scroll-behavior: smooth; /* Add smooth scrolling */
 }
 
 textarea:focus {

@@ -140,6 +140,8 @@ const elements = {
             ensureTrailingNewlineAndScroll();
             // Double check scroll after layout update
             requestAnimationFrame(() => {
+                // Smooth scroll is handled by CSS 'scroll-behavior: smooth'
+                // Just setting scrollTop will animate automatically
                 this.input.scrollTop = this.input.scrollHeight;
             });
         };
