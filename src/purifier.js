@@ -170,6 +170,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const savedInput = localStorage.getItem('ed2k_purifier_input');
     if (savedInput) {
         elements.input.value = savedInput;
+        showToast('已恢复上次未完成的输入', 'success');
     }
 
     // Initial check if there is content (e.g. browser restore or local storage)
