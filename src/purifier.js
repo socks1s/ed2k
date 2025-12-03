@@ -53,6 +53,26 @@ const elements = {
         // Bind events
         // Removed autoResize binding to keep height fixed
         document.addEventListener('keydown', handleKeydown);
+        
+        // Auto-append newline on blur/hidden
+        const ensureTrailingNewline = () => {
+            const input = this.input;
+            if (!input) return;
+            
+            const val = input.value;
+            // Only append if content exists and doesn't already end with a newline
+            if (val && !val.endsWith('\n')) {
+                input.value = val + '\n';
+            }
+        };
+
+        this.input.addEventListener('blur', ensureTrailingNewline);
+        window.addEventListener('blur', ensureTrailingNewline);
+        document.addEventListener('visibilitychange', () => {
+            if (document.hidden) {
+                ensureTrailingNewline();
+            }
+        });
     }
 };
 
@@ -110,12 +130,26 @@ function processText(text) {
     
     // Pre-process text to fix broken protocol prefixes caused by newlines
     // Matches e, d, 2, k separated by whitespace/newlines, and ://
-    const preProcessedText = text.replace(/e\s*d\s*2\s*k\s*:\s*\/\s*\//gim, (match) => {
+    let preProcessedText = text.replace(/e\s*d\s*2\s*k\s*:\s*\/\s*\//gim, (match) => {
         if (/\n|\r/.test(match)) {
             return 'ed2k://';
         }
         return match;
     });
+    
+    // Pre-process: Separate concatenated links (e.g. ...|/ed2k://...)
+    // Look for patterns where a link seems to end and another immediately starts
+    // Common end pattern is |/ (standard) or just | followed by ed2k
+    preProcessedText = preProcessedText.replace(/\|\/(ed2k:)/gi, '|/\n$1');
+    
+    // Also handle URL encoded version: %7C/ed2k... -> %7C/ \n ed2k...
+    // %7C is |
+    preProcessedText = preProcessedText.replace(/%7C\/(ed2k:)/gi, '%7C/\n$1');
+    
+    // Handle case where links are separated only by | (without slash)
+    // e.g. ...|hash|ed2k://...
+    preProcessedText = preProcessedText.replace(/\|(ed2k:)/gi, '|\n$1');
+    preProcessedText = preProcessedText.replace(/%7C(ed2k:)/gi, '%7C\n$1');
 
     const lines = preProcessedText.split('\n');
     
