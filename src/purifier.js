@@ -368,9 +368,10 @@ function validateEd2kLink(link) {
 
 function updateStatsUI() {
     if (elements.statsDiv) {
-        elements.validCount.textContent = stats.valid;
-        elements.invalidCount.textContent = stats.invalid;
-        elements.fixedCount.textContent = stats.fixed;
+        if (elements.validCount) elements.validCount.textContent = stats.valid;
+        if (elements.invalidCount) elements.invalidCount.textContent = stats.invalid;
+        // fixedCount is removed from HTML but kept in logic if needed later, ignore UI update for it if element missing
+        if (elements.fixedCount) elements.fixedCount.textContent = stats.fixed;
         if (elements.duplicateCount) elements.duplicateCount.textContent = stats.duplicates;
         if (elements.totalCount) elements.totalCount.textContent = stats.total;
         elements.statsDiv.style.display = 'block';
