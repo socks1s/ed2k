@@ -373,15 +373,20 @@ function updateStatsUI() {
         if (elements.fixedCount) elements.fixedCount.textContent = stats.fixed;
         if (elements.duplicateCount) elements.duplicateCount.textContent = stats.duplicates;
         if (elements.totalCount) elements.totalCount.textContent = stats.total;
-        elements.statsDiv.style.display = 'block';
+        // elements.statsDiv.style.display = 'block'; // No longer needed, always visible
     }
 }
 
 function clearAll() {
     if (elements.input) elements.input.value = '';
     if (elements.output) elements.output.value = '';
-    if (elements.statsDiv) elements.statsDiv.style.display = 'none';
+    // if (elements.statsDiv) elements.statsDiv.style.display = 'none'; // Keep visible
     stats.reset();
+    updateStatsUI(); // Reset stats to 0
+    
+    // Also clear failed section
+    if (elements.failedSection) elements.failedSection.style.display = 'none';
+    if (elements.failedOutput) elements.failedOutput.value = '';
 }
 
 function copyOutput() {
