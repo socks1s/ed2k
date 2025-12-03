@@ -34,6 +34,7 @@ const elements = {
     duplicateCount: null,
     totalCount: null,
     toast: null,
+    copyBtn: null,
     
     init() {
         this.input = document.getElementById('inputText');
@@ -47,6 +48,7 @@ const elements = {
         this.duplicateCount = document.getElementById('duplicateCount');
         this.totalCount = document.getElementById('totalCount');
         this.toast = document.getElementById('toast');
+        this.copyBtn = document.getElementById('copyBtn');
         
         // Bind events
         // Removed autoResize binding to keep height fixed
@@ -78,6 +80,11 @@ function purifyLinks() {
     const result = processText(inputText);
     
     elements.output.value = result.join('\n');
+    
+    // Enable copy button if there are results
+    if (elements.copyBtn) {
+        elements.copyBtn.disabled = result.length === 0;
+    }
     
     // Handle failed links display
     if (stats.failedLinks.length > 0) {
@@ -401,6 +408,9 @@ function clearAll() {
     // Also clear failed section
     if (elements.failedSection) elements.failedSection.style.display = 'none';
     if (elements.failedOutput) elements.failedOutput.value = '';
+
+    // Disable copy button
+    if (elements.copyBtn) elements.copyBtn.disabled = true;
 }
 
 function copyOutput() {
@@ -413,7 +423,7 @@ function copyOutput() {
     
     if (navigator.clipboard && navigator.clipboard.writeText) {
         navigator.clipboard.writeText(text)
-            .then(() => showToast('✅ 已复制', 'success'))
+            .then(() => showToast('已复制', 'success'))
             .catch(() => fallbackCopy(elements.output));
     } else {
         fallbackCopy(elements.output);
@@ -424,7 +434,7 @@ function fallbackCopy(textarea) {
     textarea.select();
     try {
         document.execCommand('copy');
-        showToast('✅ 已复制', 'success');
+        showToast('已复制', 'success');
     } catch (err) {
         showToast('复制失败，请手动复制', 'error');
     }
@@ -437,8 +447,19 @@ function showToast(message, type = 'success') {
     elements.toast.className = 'toast';
     elements.toast.classList.add(type);
     
-    elements.toast.textContent = message;
-    elements.toast.style.display = 'flex'; // Flex for alignment
+    // Create icon element
+    const icon = document.createElement('div');
+    icon.className = `toast-icon icon-${type}`;
+    
+    // Create text node
+    const text = document.createTextNode(message.replace(/^[✅⚠️❌]\s*/, '')); // Strip existing emojis if any
+    
+    // Clear and append
+    elements.toast.innerHTML = '';
+    elements.toast.appendChild(icon);
+    elements.toast.appendChild(text);
+    
+    elements.toast.style.display = 'flex';
     
     // Trigger reflow
     elements.toast.offsetHeight; 
@@ -448,7 +469,7 @@ function showToast(message, type = 'success') {
         elements.toast.classList.remove('show');
         setTimeout(() => {
             elements.toast.style.display = 'none';
-        }, 300);
+        }, 400); // Match transition duration
     }, 2000);
 }
 

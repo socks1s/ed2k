@@ -16,7 +16,7 @@
             <!-- Input Section -->
             <section class="panel input-panel">
                 <div class="panel-header">
-                    <label for="inputText">原始链接输入</label>
+                    <label for="inputText">原始链接</label>
                     <div class="actions">
                         <button onclick="purifyLinks()" class="btn-primary" title="快捷键: Ctrl+Enter">✨ 净化</button>
                         <button onclick="clearAll()" class="btn-icon" title="清空内容 (Ctrl+R)">🗑️</button>
@@ -30,7 +30,7 @@
             <section class="panel output-panel">
                 <div class="panel-header">
                     <label for="outputText">净化结果</label>
-                    <button onclick="copyOutput()" class="btn-secondary">📋 复制结果</button>
+                    <button id="copyBtn" onclick="copyOutput()" class="btn-secondary" disabled>📋 复制</button>
                 </div>
                 <textarea id="outputText" readonly placeholder="净化后的链接将显示在此处..."></textarea>
                 
