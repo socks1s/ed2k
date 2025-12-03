@@ -90,6 +90,7 @@ function purifyLinks() {
     
     updateStatsUI();
     elements.output.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    showToast('净化完成', 'success');
 }
 
 /**
@@ -373,7 +374,20 @@ function updateStatsUI() {
         if (elements.fixedCount) elements.fixedCount.textContent = stats.fixed;
         if (elements.duplicateCount) elements.duplicateCount.textContent = stats.duplicates;
         if (elements.totalCount) elements.totalCount.textContent = stats.total;
-        // elements.statsDiv.style.display = 'block'; // No longer needed, always visible
+        
+        // Dynamic class switching based on results
+        elements.statsDiv.className = 'stats'; // Reset to base class
+        
+        if (stats.total > 0) {
+            if (stats.valid > 0 && stats.invalid === 0) {
+                elements.statsDiv.classList.add('success');
+            } else if (stats.valid > 0 && stats.invalid > 0) {
+                elements.statsDiv.classList.add('warning');
+            } else if (stats.valid === 0) {
+                elements.statsDiv.classList.add('error');
+            }
+        }
+        // If total is 0, it stays default gray
     }
 }
 
