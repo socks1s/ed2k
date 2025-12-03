@@ -157,9 +157,15 @@ function extractPotentialLinks(text) {
         // Fuzzy protocol (e删d2k etc) - allows up to 20 chars between letters
         /e[^\s<>]{0,20}d[^\s<>]{0,20}2[^\s<>]{0,20}k[^\s<>]*:\/\/[^\n\r<>]+/gi,
         // Generic protocol with |file|
-        /[^\s<>]*:\/\/[\s]*\|file\|[^\s<>]*/gi,
+        // We need to allow spaces in the filename part.
+        // The pattern should match `anything://` + `|file|` + `...`
+        // But we need to be careful not to match too much.
+        // Let's try to match until a pipe followed by slash `|/` which is typical end of ed2k
+        // Or just be more permissive with characters after |file|
+        /[^\s<>]*:\/\/[\s]*\|file\|[^\n\r<>]*/gi,
+        
         // Partial link starting with |file| - Enhanced to catch cases with spaces or brackets before
-        /(?:^|[\s<>\[\(])ed2k[^\s<>]*\|file\|[^\s<>]*/gi,
+        /(?:^|[\s<>\[\(])ed2k[^\s<>]*\|file\|[^\n\r<>]*/gi,
         // Fallback: try to match |file|...|/ pattern even if protocol is missing or broken
         /\|file\|[^|]+\|\d+\|[A-F0-9]{32}\|.*\|?\/?/gi
     ];
@@ -169,10 +175,24 @@ function extractPotentialLinks(text) {
         // Reset lastIndex for global regex if reused (though we create new ones here)
         while ((match = pattern.exec(text)) !== null) {
             const candidate = match[0] || match[1]; // match[1] for capturing groups
-            // Avoid adding substrings of already found links
-            if (!links.some(l => l.includes(candidate) || candidate.includes(l))) {
-                links.push(candidate);
+            
+            // Check if we already have a longer version of this link
+            const existingIndex = links.findIndex(l => l.includes(candidate));
+            if (existingIndex !== -1) {
+                // Already have a longer or equal version, ignore this candidate
+                continue;
             }
+            
+            // Check if this candidate is a longer version of an existing link
+            const subStringIndex = links.findIndex(l => candidate.includes(l));
+            if (subStringIndex !== -1) {
+                // This candidate is longer/better, replace the existing one
+                links[subStringIndex] = candidate;
+                continue;
+            }
+            
+            // No overlap found, add as new
+            links.push(candidate);
         }
     }
     
