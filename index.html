@@ -3,51 +3,69 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ED2K链接净化器</title>
+    <title>ED2K 链接净化器</title>
     <link rel="stylesheet" href="src/style.css">
 </head>
 <body>
-    <div class="container">
-        <h1>🔗 ED2K链接净化器</h1>
+    <div class="app-container">
+        <header class="app-header">
+            <h1>🔗 ED2K 链接净化器</h1>
+        </header>
         
-        <div class="input-section">
-            <label for="inputText">输入框（粘贴包含ed2k链接的文本）：</label>
-            <textarea id="inputText" placeholder="请在此处粘贴包含ed2k链接的文本...
+        <main class="app-content">
+            <!-- Input Section -->
+            <section class="panel input-panel">
+                <div class="panel-header">
+                    <label for="inputText">原始链接输入</label>
+                    <div class="actions">
+                        <button onclick="purifyLinks()" class="btn-primary" title="快捷键: Ctrl+Enter">✨ 净化</button>
+                        <button onclick="clearAll()" class="btn-icon" title="清空内容 (Ctrl+R)">🗑️</button>
+                    </div>
+                </div>
+                <textarea id="inputText" placeholder="请粘贴包含ed2k链接的文本..."></textarea>
+                <div class="help-text">支持：HTML标签、URL编码及包含中文干扰的乱码链接</div>
+            </section>
 
-示例：
-&lt;p&gt;ed2k://|file|example_video.mp4|1234567890|ABC123DEF456789012345678901234567890|/&lt;/p&gt;
-ed2k删除://|file|sample_file.mp4|9876543210|DEF456ABC789012345678901234567890123|h=XYZABC123DEFGHI456JKLMNO789PQRSTUV|/
-ed2k://%7Cfile%7C%20demo_content.mp4%7C1357924680%7CGHI789JKL012345678901234567890ABCDEF%7Ch=MNOPQR456STUVWX789ABCDEF012345GHIJK%7C/"></textarea>
-            <div class="help-text">
-                支持的格式：HTML标签包裹的链接、URL编码的链接、包含"删除"字样的链接等
-            </div>
-        </div>
+            <!-- Output Section -->
+            <section class="panel output-panel">
+                <div class="panel-header">
+                    <label for="outputText">净化结果</label>
+                    <button onclick="copyOutput()" class="btn-secondary">📋 复制结果</button>
+                </div>
+                <textarea id="outputText" readonly placeholder="净化后的链接将显示在此处..."></textarea>
+                
+                <!-- Failed Links (Conditional) -->
+                <div id="failedSection" class="failed-container" style="display: none;">
+                    <div class="failed-header">
+                        <label for="failedText">⚠️ 无法识别的链接</label>
+                    </div>
+                    <textarea id="failedText" readonly></textarea>
+                </div>
+
+                <!-- Stats Bar -->
+                <div id="stats" class="stats-bar">
+                    <div class="stat-item">
+                        <span class="stat-label">总数</span>
+                        <span class="stat-value" id="totalCount">0</span>
+                    </div>
+                    <div class="stat-item success">
+                        <span class="stat-label">有效</span>
+                        <span class="stat-value" id="validCount">0</span>
+                    </div>
+                    <div class="stat-item warning">
+                        <span class="stat-label">重复</span>
+                        <span class="stat-value" id="duplicateCount">0</span>
+                    </div>
+                    <div class="stat-item error">
+                        <span class="stat-label">失败</span>
+                        <span class="stat-value" id="invalidCount">0</span>
+                    </div>
+                </div>
+            </section>
+        </main>
         
-        <div class="button-container">
-            <button onclick="purifyLinks()">🧹 净化链接</button>
-            <button onclick="clearAll()" class="secondary-btn">🗑️ 清空所有</button>
-            <button onclick="copyOutput()" class="secondary-btn">📋 复制结果</button>
-        </div>
-        
-        <div class="output-section">
-            <label for="outputText">输出框（净化后的ed2k链接）：</label>
-            <textarea id="outputText" readonly placeholder="净化后的ed2k链接将显示在这里..."></textarea>
-        </div>
-        
-        <div id="failedSection" class="output-section" style="display: none;">
-            <label for="failedText" style="color: #c62828;">⚠️ 修复失败的链接：</label>
-            <textarea id="failedText" readonly placeholder="无法识别或修复的链接..." style="background-color: #ffebee; border-color: #ef9a9a;"></textarea>
-        </div>
-        
-        <div id="stats" class="stats">
-            <div class="stats-item">📊 总链接数量：<span id="totalCount">0</span></div>
-            <div class="stats-item">✅ 修复成功数量：<span id="validCount">0</span></div>
-            <div class="stats-item">🔄 重复数量：<span id="duplicateCount">0</span></div>
-            <div class="stats-item">❌ 修复失败数量：<span id="invalidCount">0</span></div>
-        </div>
         <div id="toast" class="toast"></div>
     </div>
-
     <script src="src/purifier.js"></script>
 </body>
 </html>

@@ -376,7 +376,7 @@ function updateStatsUI() {
         if (elements.totalCount) elements.totalCount.textContent = stats.total;
         
         // Dynamic class switching based on results
-        elements.statsDiv.className = 'stats'; // Reset to base class
+        elements.statsDiv.className = 'stats-bar'; // Reset to base class
         
         if (stats.total > 0) {
             if (stats.valid > 0 && stats.invalid === 0) {
