@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>ED2K链接解码测试</title>
+</head>
+<body>
+    <h1>ED2K URL编码链接测试</h1>
+    <div id="results"></div>
+    
+    <script>
+        // 复制主页面的关键函数进行测试
+        function extractPotentialEd2kLinks(text) {
+            const links = [];
+            
+            // 1. 从HTML标签中提取ed2k链接
+            const htmlRegex = /<[^>]*>(ed2k[^<]*)<\/[^>]*>/gi;
+            let htmlMatch;
+            while ((htmlMatch = htmlRegex.exec(text)) !== null) {
+                links.push(htmlMatch[1]);
+            }
+            
+            // 2. 匹配URL编码的ed2k链接（%7C等）
+            const encodedRegex = /ed2k[^:]*:%[0-9A-F]{2}[^\s<>]*/gi;
+            const encodedMatches = text.match(encodedRegex);
+            if (encodedMatches) {
+                links.push(...encodedMatches);
+            }
+            
+            // 3. 直接匹配ed2k链接（包括各种变形）
+            const ed2kRegex = /ed2k[^:]*:\/\/[^\s<>]+/gi;
+            const matches = text.match(ed2kRegex);
+            if (matches) {
+                links.push(...matches);
+            }
+            
+            // 4. 匹配包含|file|的片段
+            const fileRegex = /ed2k[^\s<>]*\|file\|[^\s<>]*/gi;
+            const fileMatches = text.match(fileRegex);
+            if (fileMatches) {
+                for (let match of fileMatches) {
+                    if (!links.some(link => link.includes(match) || match.includes(link))) {
+                        links.push(match);
+                    }
+                }
+            }
+            
+            return links;
+        }
+
+        function purifyEd2kLink(link) {
+            let originalLink = link;
+            let wasFixed = false;
+            
+            // 1. 去除HTML标签
+            link = link.replace(/<[^>]*>/g, '');
+            
+            // 2. 处理"删除"等干扰词
+            if (link.includes('删除')) {
+                link = link.replace(/删除/g, '');
+                wasFixed = true;
+            }
+            
+            // 3. URL解码
+            if (link.includes('%')) {
+                try {
+                    link = decodeURIComponent(link);
+                    wasFixed = true;
+                } catch (e) {
+                    // 如果解码失败，继续使用原链接
+                }
+            }
+            
+            // 4. 修复协议部分
+            if (!link.startsWith('ed2k://')) {
+                // 处理各种变形
+                link = link.replace(/^ed2k[^:]*:[\/\%]*[\/\%]*/i, 'ed2k://');
+                wasFixed = true;
+            }
+            
+            // 5. 确保链接以正确的格式结尾
+            if (!link.endsWith('/') && link.includes('|file|')) {
+                link += '/';
+                wasFixed = true;
+            }
+            
+            // 6. 清理多余的空格（但保留文件名中的空格）
+            // 只在链接开头和结尾去除空格
+            link = link.trim();
+            
+            // 7. 验证ed2k链接格式
+            const isValid = validateEd2kLink(link);
+            
+            return {
+                link: link,
+                isValid,
+                wasFixed: wasFixed || (originalLink !== link)
+            };
+        }
+
+        function validateEd2kLink(link) {
+            // 基本格式验证：ed2k://|file|文件名|大小|哈希值|可选参数|/
+            // 哈希值必须是32位十六进制，可能有额外的h=参数
+            const ed2kPattern = /^ed2k:\/\/\|file\|[^|]+\|\d+\|[A-F0-9]{32}\|.*\|?\/?$/i;
+            return ed2kPattern.test(link);
+        }
+
+        // 测试用例
+        const testLink = 'ed2k://%7Cfile%7C%20OAV1202.mp4%7C2679020323%7CA4F82CB3B17F095C8B054EFF6C2A0464%7Ch=MGKR42RDNTWVVE5HZTNSSWJWIS5IWHW7%7C/';
+        
+        console.log('测试链接:', testLink);
+        
+        // 提取链接
+        const extractedLinks = extractPotentialEd2kLinks(testLink);
+        console.log('提取到的链接:', extractedLinks);
+        
+        // 净化每个链接
+        const results = [];
+        for (let link of extractedLinks) {
+            const result = purifyEd2kLink(link);
+            results.push(result);
+            console.log('净化结果:', result);
+        }
+        
+        // 显示结果
+        const resultsDiv = document.getElementById('results');
+        resultsDiv.innerHTML = `
+            <h2>测试结果：</h2>
+            <p><strong>原始链接：</strong><br>${testLink}</p>
+            <p><strong>提取到的链接数量：</strong> ${extractedLinks.length}</p>
+            <div style="margin-top: 20px;">
+                ${results.map((result, index) => `
+                    <div style="border: 1px solid #ccc; padding: 10px; margin: 10px 0;">
+                        <h3>链接 ${index + 1}:</h3>
+                        <p><strong>净化后：</strong> ${result.link}</p>
+                        <p><strong>是否有效：</strong> ${result.isValid ? '✅ 是' : '❌ 否'}</p>
+                        <p><strong>是否修复：</strong> ${result.wasFixed ? '✅ 是' : '❌ 否'}</p>
+                    </div>
+                `).join('')}
+            </div>
+        `;
+    </script>
+</body>
+</html>
