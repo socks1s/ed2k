@@ -34,6 +34,11 @@ ed2k://%7Cfile%7C%20demo_content.mp4%7C1357924680%7CGHI789JKL0123456789012345678
             <textarea id="outputText" readonly placeholder="净化后的ed2k链接将显示在这里..."></textarea>
         </div>
         
+        <div id="failedSection" class="output-section" style="display: none;">
+            <label for="failedText" style="color: #c62828;">⚠️ 修复失败的链接：</label>
+            <textarea id="failedText" readonly placeholder="无法识别或修复的链接..." style="background-color: #ffebee; border-color: #ef9a9a;"></textarea>
+        </div>
+        
         <div id="stats" class="stats" style="display: none;">
             <div class="stats-item">📊 <span id="totalCount">0</span> 个链接已扫描</div>
             <div class="stats-item">✅ <span id="validCount">0</span> 个有效链接</div>

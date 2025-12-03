@@ -9,11 +9,13 @@ const stats = {
     valid: 0,
     invalid: 0,
     fixed: 0,
+    failedLinks: [],
     reset() {
         this.total = 0;
         this.valid = 0;
         this.invalid = 0;
         this.fixed = 0;
+        this.failedLinks = [];
     }
 };
 
@@ -21,6 +23,8 @@ const stats = {
 const elements = {
     input: null,
     output: null,
+    failedOutput: null,
+    failedSection: null,
     statsDiv: null,
     validCount: null,
     invalidCount: null,
@@ -31,6 +35,8 @@ const elements = {
     init() {
         this.input = document.getElementById('inputText');
         this.output = document.getElementById('outputText');
+        this.failedOutput = document.getElementById('failedText');
+        this.failedSection = document.getElementById('failedSection');
         this.statsDiv = document.getElementById('stats');
         this.validCount = document.getElementById('validCount');
         this.invalidCount = document.getElementById('invalidCount');
@@ -68,6 +74,17 @@ function purifyLinks() {
     const result = processText(inputText);
     
     elements.output.value = result.join('\n');
+    
+    // Handle failed links display
+    if (stats.failedLinks.length > 0) {
+        if (elements.failedSection) elements.failedSection.style.display = 'block';
+        if (elements.failedOutput) elements.failedOutput.value = stats.failedLinks.join('\n');
+        autoResize(elements.failedOutput);
+    } else {
+        if (elements.failedSection) elements.failedSection.style.display = 'none';
+        if (elements.failedOutput) elements.failedOutput.value = '';
+    }
+    
     updateStatsUI();
     elements.output.scrollIntoView({ behavior: 'smooth', block: 'center' });
 }
@@ -105,9 +122,17 @@ function processText(text) {
                 } else {
                     // Duplicate valid link, we might want to count it or ignore
                     // For now, we don't increment valid count for duplicates
+                    // But to make total = valid + invalid match visually if we sum counts,
+                    // we should probably track duplicates separately if we care about exact equation.
+                    // However, user requirement "total = valid + invalid" usually implies unique valid + failed attempts.
+                    // Or total inputs = unique valid + duplicate valid + invalid.
+                    // Let's just ensure stats.total tracks ALL attempts.
+                    // And stats.invalid tracks failures.
+                    // If a link is valid but duplicate, it is still a "success" in processing terms.
                 }
             } else {
                 stats.invalid++;
+                stats.failedLinks.push(rawLink);
             }
         }
     }
@@ -129,14 +154,17 @@ function extractPotentialLinks(text) {
         /<[^>]*>(ed2k[^<]*)<\/[^>]*>/gi,
         // URL Encoded
         /ed2k[^:]*:%[0-9A-F]{2}[^\s<>]*/gi,
-        // Standard (including dirty variants)
-        /ed2k[^:]*:\/\/[^\s<>]+/gi,
+        // Standard (including dirty variants) - now allowing spaces if they are part of filename structure
+        // We match until the end of the ed2k link structure which usually ends with |/
+        /ed2k[^:]*:\/\/[^\n\r<>]+/gi,
         // Fuzzy protocol (e删d2k etc) - allows up to 20 chars between letters
-        /e[^\s<>]{0,20}d[^\s<>]{0,20}2[^\s<>]{0,20}k[^\s<>]*:\/\/[^\s<>]+/gi,
+        /e[^\s<>]{0,20}d[^\s<>]{0,20}2[^\s<>]{0,20}k[^\s<>]*:\/\/[^\n\r<>]+/gi,
         // Generic protocol with |file|
         /[^\s<>]*:\/\/[\s]*\|file\|[^\s<>]*/gi,
-        // Partial link starting with |file|
-        /ed2k[^\s<>]*\|file\|[^\s<>]*/gi
+        // Partial link starting with |file| - Enhanced to catch cases with spaces or brackets before
+        /(?:^|[\s<>\[\(])ed2k[^\s<>]*\|file\|[^\s<>]*/gi,
+        // Fallback: try to match |file|...|/ pattern even if protocol is missing or broken
+        /\|file\|[^|]+\|\d+\|[A-F0-9]{32}\|.*\|?\/?/gi
     ];
 
     for (const pattern of patterns) {
@@ -174,6 +202,9 @@ function purifyLink(link) {
     if (currentLink.includes('%')) {
         try {
             // Only decode if it looks like it has encoded chars
+            // Try to decode multiple times if needed (though usually once is enough unless double encoded)
+            // But first, let's be careful not to break things that shouldn't be decoded if mixed.
+            // However, for ed2k links, usually the whole thing or filename is encoded.
             const decoded = decodeURIComponent(currentLink);
             if (decoded !== currentLink) {
                 currentLink = decoded;
@@ -184,6 +215,25 @@ function purifyLink(link) {
         }
     }
 
+    // Special case: If the link contains spaces in the protocol part (e.g. "[KO deep] ...")
+    // The regex extraction might have grabbed "[KO deep] " as part of the start if we are not careful,
+    // OR, more likely, the extraction regex for fuzzy match `ed2k...` might not have triggered 
+    // if the start is completely messed up like `[KO deep] ed2k://...` -> Wait, if it is `ed2k://` it should be fine.
+    // Let's look at the failing case: `ed2k://|file|[KO deep] ...`
+    // If `[KO deep]` is part of the filename, it should be fine.
+    // But wait, if the input was `ed2k://|file|[KO deep] ...` 
+    // The issue might be `cleanProtocolPrefix` removing things it shouldn't?
+    // No, `cleanProtocolPrefix` only touches things BEFORE `|`.
+    // Let's look at the failed link from logs: `ed2k://|file|[KO`
+    // It seems truncated! 
+    // Ah, the regex `ed2k[^:]*:\/\/[^\s<>]+` matches until whitespace!
+    // If the filename contains spaces (which is valid in ed2k logical filenames, but often encoded), 
+    // the regex stops at the space.
+    // We need to adjust the regex to allow spaces in the filename part if it's within the |file|...| structure.
+    
+    // No change here in purifyLink, but we need to fix extractPotentialLinks regex.
+
+
     // 3. Clean Protocol Prefix (remove CJK and other noise)
     const cleanPrefixResult = cleanProtocolPrefix(currentLink);
     if (cleanPrefixResult !== currentLink) {
@@ -193,7 +243,12 @@ function purifyLink(link) {
 
     // 4. Normalize Protocol
     if (!currentLink.startsWith('ed2k://')) {
-        currentLink = currentLink.replace(/^[^:]*:\/\/+/, 'ed2k://');
+        // If it starts with |file|, prepend ed2k://
+        if (currentLink.startsWith('|file|')) {
+            currentLink = 'ed2k://' + currentLink;
+        } else {
+            currentLink = currentLink.replace(/^[^:]*:\/\/+/, 'ed2k://');
+        }
         wasFixed = true;
     }
 
